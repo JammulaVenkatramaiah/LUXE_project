@@ -1,0 +1,5 @@
+package com.fashion.ecommerce.entity;
+
+public enum OrderStatus {
+    PENDING, PAYMENT_PENDING, PAID, PROCESSING, CONFIRMED, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, REFUNDED, RETURNED
+}

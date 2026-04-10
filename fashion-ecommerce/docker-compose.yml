@@ -1,0 +1,95 @@
+
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: fashion-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: fashion_ecommerce
+      MYSQL_USER: fashion_user
+      MYSQL_PASSWORD: fashion_password
+      MYSQL_ROOT_PASSWORD: root_password
+    ports:
+      - "3307:3306"
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+      - ./database:/docker-entrypoint-initdb.d
+    networks:
+      - fashion-network
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 20s
+      retries: 10
+
+  adminer:
+    image: adminer
+    container_name: fashion-adminer
+    restart: always
+    ports:
+      - "8081:8080"
+    networks:
+      - fashion-network
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.1
+    container_name: fashion-es
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    mem_limit: 2g
+    ports:
+      - "9200:9200"
+    networks:
+      - fashion-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1" ]
+      interval: 20s
+      timeout: 10s
+      retries: 15
+      start_period: 60s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fashion-backend
+    restart: always
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://fashion-mysql:3306/fashion_ecommerce?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=fashion_user
+      - SPRING_DATASOURCE_PASSWORD=fashion_password
+      - SPRING_ELASTICSEARCH_URIS=http://fashion-es:9200
+      - JWT_SECRET=your_very_secure_secret_key_for_jwt_token_generation_32_characters
+      - STRIPE_SECRET_KEY=sk_test_placeholder
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - fashion-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fashion-frontend
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - fashion-network
+
+networks:
+  fashion-network:
+    driver: bridge
+
+volumes:
+  mysql-data:

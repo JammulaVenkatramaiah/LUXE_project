@@ -1,0 +1,108 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+spring:
+  application:
+    name: fashion-ecommerce-api
+  profiles:
+    active: dev
+  # Database Configuration
+  datasource:
+    url: jdbc:mysql://localhost:3307/fashion_ecommerce?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: fashion_user
+    password: fashion_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+  # Cache Configuration
+  cache:
+    type: caffeine
+    cache-names: products,featured,admin_dashboard
+    caffeine:
+      spec: expireAfterWrite=15m,maximumSize=500
+
+# Security - JWT Configuration
+jwt:
+  secret: fashion_ecommerce_secret_key_make_this_very_long_and_secure_2024
+  expiration: 86400000
+  refresh:
+    expiration: 604800000
+
+# Application Configuration
+app:
+  name: Fashion E-Commerce
+  version: 1.0.0
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:3001
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.fashion.ecommerce: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+# File Upload Configuration
+upload:
+  dir: ./uploads
+  max-size: 5242880
+
+# Pagination
+pagination:
+  default-size: 20
+  max-size: 100
+
+# Jackson Configuration
+jackson:
+  serialization:
+    write-dates-as-timestamps: false
+    indent-output: true
+  default-property-inclusion: non_null
+
+# Monitoring Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Sentry Configuration
+sentry:
+  dsn: ""
+  traces-sample-rate: 1.0
+  exception-resolver-order: -2147483647
+  logging:
+    minimum-event-level: ERROR
+    minimum-breadcrumb-level: INFO
+
+stripe:
+  api:
+    key: "sk_test_mocked_secret_key_for_development"
+  webhook:
+    secret: "whsec_mocked_webhook_secret_key"
