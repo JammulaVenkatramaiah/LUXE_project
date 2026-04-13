@@ -47,7 +47,7 @@ function App() {
   }
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router basename="/LUXE_project" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className={`${isDark ? 'dark' : ''} min-h-screen`}>
         <Navbar isDark={isDark} toggleTheme={toggleTheme} />
         
