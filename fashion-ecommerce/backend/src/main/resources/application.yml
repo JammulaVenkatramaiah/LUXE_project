@@ -8,9 +8,9 @@ spring:
     active: dev
   # Database Configuration
   datasource:
-    url: jdbc:mysql://localhost:3306/fashion_ecommerce?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: root
+    url: jdbc:mysql://gateway01.ap-southeast-1.prod.aws.tidbcloud.com:4000/test?useSSL=true&enabledTLSProtocols=TLSv1.2&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: 4J9paQoHuRfhvzx.root
+    password: Kyj0ikGxGi5xThUH
     driver-class-name: com.mysql.cj.jdbc.Driver
   # JPA/Hibernate Configuration
   jpa:
