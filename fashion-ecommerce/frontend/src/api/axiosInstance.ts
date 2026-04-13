@@ -28,7 +28,7 @@ axiosInstance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 && !error.config.url.includes('/auth/login')) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      window.location.href = (import.meta.env.BASE_URL || '/') + 'login'
     }
     return Promise.reject(error)
   }
