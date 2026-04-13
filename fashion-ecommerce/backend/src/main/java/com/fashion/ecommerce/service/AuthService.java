@@ -53,10 +53,12 @@ public class AuthService {
                     loginRequest.getPassword()
                 )
             );
+            logger.info("DEBUG: Authentication successful for email: {}", loginRequest.getEmail());
             
             String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getId(), user.getEmail(), user.getRole().toString()
             );
+            logger.info("DEBUG: Generated access token for user ID: {}", user.getId());
             String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
             
             return AuthResponse.builder()

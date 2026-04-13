@@ -174,6 +174,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.fashion.ecommerce.FashionECommerceApplication</mainClass>
+                    <jvmArguments>-Xmx512m -Xms256m -XX:TieredStopAtLevel=1</jvmArguments>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

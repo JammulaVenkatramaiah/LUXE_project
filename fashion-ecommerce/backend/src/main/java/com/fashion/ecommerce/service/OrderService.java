@@ -1,4 +1,7 @@
 package com.fashion.ecommerce.service;
+ 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fashion.ecommerce.dto.*;
 import com.fashion.ecommerce.entity.*;
@@ -21,6 +24,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+    private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
+ 
 
     @Autowired
     private OrderRepository orderRepository;
@@ -45,76 +50,118 @@ public class OrderService {
 
     @Transactional
     public OrderDTO createOrder(Long userId, CreateOrderRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        CartDTO cart = cartService.getCart(userId);
-        if (cart.getCartItems().isEmpty()) {
-            throw new BadRequestException("Cannot place an order with an empty cart");
-        }
-
-        // Validate stock before processing
-        for (CartItemDTO item : cart.getCartItems()) {
-            Product product = productRepository.findById(item.getProductId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + item.getProductId()));
-            if (product.getStockQuantity() < item.getQuantity()) {
-                throw new BadRequestException("Insufficient stock for product: " + product.getName());
-            }
-        }
-
-        // Create Order
-        Order order = Order.builder()
-                .user(user)
-                .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .shippingAddress(request.getShippingAddress())
-                .paymentMethod(request.getPaymentMethod())
-                .subtotal(cart.getTotalPrice())
-                .taxAmount(cart.getTotalPrice() * 0.05) // 5% Tax
-                .shippingCost(cart.getTotalPrice() > 100 ? 0.0 : 10.0) // Free shipping over $100
-                .totalPrice(cart.getTotalPrice() + (cart.getTotalPrice() * 0.05) + (cart.getTotalPrice() > 100 ? 0.0 : 10.0))
-                .status(OrderStatus.PENDING)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
-                .build();
-
-        Order savedOrder = orderRepository.save(order);
-        
-        orderTrackingRepository.save(OrderTrackingEvent.builder()
-                .order(savedOrder)
-                .status(OrderStatus.PENDING)
-                .description("Order successfully placed")
-                .location("Online")
-                .build());
-
-        // Create Order Items and Update Stock
-        List<OrderItem> orderItems = cart.getCartItems().stream().map(cartItem -> {
-            Product product = productRepository.findById(cartItem.getProductId()).get();
+        try {
+            logger.info("DEBUG: Creating order for user ID: {}", userId);
             
-            // Deduct Stock
-            product.setStockQuantity(product.getStockQuantity() - cartItem.getQuantity());
-            productRepository.save(product);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> {
+                        logger.error("DEBUG: User not found for ID: {}", userId);
+                        return new ResourceNotFoundException("User not found");
+                    });
 
-            return OrderItem.builder()
-                    .order(savedOrder)
-                    .product(product)
-                    .quantity(cartItem.getQuantity())
-                    .unitPrice(cartItem.getPrice())
-                    .size(cartItem.getSize())
-                    .color(cartItem.getColor())
+            CartDTO cart = cartService.getCart(userId);
+            if (cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+                logger.warn("DEBUG: Empty cart for user: {}", userId);
+                throw new BadRequestException("Cannot place an order with an empty cart");
+            }
+            
+            logger.info("DEBUG: Cart contains {} items, total price: {}", 
+                     cart.getCartItems().size(), cart.getTotalPrice());
+
+            // Validate stock before processing
+            for (CartItemDTO item : cart.getCartItems()) {
+                Product product = productRepository.findById(item.getProductId())
+                        .orElseThrow(() -> {
+                            logger.error("DEBUG: Product not found: {}", item.getProductId());
+                            return new ResourceNotFoundException("Product not found: " + item.getProductId());
+                        });
+                
+                logger.info("DEBUG: Checking stock for product: {} (ID: {}). Requested: {}, Available: {}", 
+                         product.getName(), product.getId(), item.getQuantity(), product.getStockQuantity());
+                         
+                if (product.getStockQuantity() < item.getQuantity()) {
+                    logger.warn("DEBUG: Insufficient stock for product: {}", product.getName());
+                    throw new BadRequestException("Insufficient stock for product: " + product.getName());
+                }
+            }
+
+            // Calculations
+            double subtotal = cart.getTotalPrice() != null ? cart.getTotalPrice() : 0.0;
+            double taxAmount = subtotal * 0.05;
+            double shippingCost = subtotal > 100 ? 0.0 : 10.0;
+            double totalPrice = subtotal + taxAmount + shippingCost;
+            
+            logger.info("DEBUG: Order Summary - Subtotal: {}, Tax: {}, Shipping: {}, Total: {}", 
+                     subtotal, taxAmount, shippingCost, totalPrice);
+
+            // Create Order
+            Order order = Order.builder()
+                    .user(user)
+                    .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                    .shippingAddress(request.getShippingAddress())
+                    .paymentMethod(request.getPaymentMethod())
+                    .subtotal(subtotal)
+                    .taxAmount(taxAmount)
+                    .shippingCost(shippingCost)
+                    .totalPrice(totalPrice)
+                    .status(OrderStatus.PENDING)
                     .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
                     .build();
-        }).collect(Collectors.toList());
 
-        orderItemRepository.saveAll(orderItems);
-        savedOrder.setOrderItems(orderItems);
+            logger.info("DEBUG: Saving order with number: {}", order.getOrderNumber());
+            Order savedOrder = orderRepository.save(order);
+            
+            orderTrackingRepository.save(OrderTrackingEvent.builder()
+                    .order(savedOrder)
+                    .status(OrderStatus.PENDING)
+                    .description("Order successfully placed")
+                    .location("Online")
+                    .build());
 
-        // Clear Cart
-        cartService.clearCart(userId);
-        
-        // Asynchronously notify user
-        notificationService.sendOrderConfirmation(user, savedOrder.getOrderNumber());
+            // Create Order Items and Update Stock
+            logger.info("DEBUG: Processing {} order items", cart.getCartItems().size());
+            List<OrderItem> orderItems = cart.getCartItems().stream().map(cartItem -> {
+                Product product = productRepository.findById(cartItem.getProductId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Product disappeared during processing: " + cartItem.getProductId()));
+                
+                // Deduct Stock
+                int newStock = product.getStockQuantity() - cartItem.getQuantity();
+                logger.info("DEBUG: Updating stock for {}: {} -> {}", product.getName(), product.getStockQuantity(), newStock);
+                product.setStockQuantity(newStock);
+                productRepository.save(product);
 
-        return convertToDTO(savedOrder);
+                return OrderItem.builder()
+                        .order(savedOrder)
+                        .product(product)
+                        .quantity(cartItem.getQuantity())
+                        .unitPrice(cartItem.getPrice() != null ? cartItem.getPrice() : product.getPrice())
+                        .size(cartItem.getSize())
+                        .color(cartItem.getColor())
+                        .createdAt(LocalDateTime.now())
+                        .build();
+            }).collect(Collectors.toList());
+
+            orderItemRepository.saveAll(orderItems);
+            savedOrder.setOrderItems(orderItems);
+
+            // Clear Cart
+            logger.info("DEBUG: Clearing cart for user: {}", userId);
+            cartService.clearCart(userId);
+            
+            // Asynchronously notify user
+            try {
+                notificationService.sendOrderConfirmation(user, savedOrder.getOrderNumber());
+            } catch (Exception e) {
+                logger.error("DEBUG: Failed to send notification (non-fatal): {}", e.getMessage());
+            }
+
+            logger.info("DEBUG: Order created successfully: {}", savedOrder.getId());
+            return convertToDTO(savedOrder);
+        } catch (Exception e) {
+            logger.error("CRITICAL: Error creating order for user {}: {}", userId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     public Page<OrderDTO> getMyOrders(Long userId, int page, int size) {

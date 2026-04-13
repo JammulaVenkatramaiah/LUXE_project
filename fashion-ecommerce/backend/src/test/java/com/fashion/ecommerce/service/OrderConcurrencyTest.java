@@ -41,7 +41,6 @@ public class OrderConcurrencyTest {
     @Autowired
     private CartService cartService;
 
-    private Long userId;
     private Long productId;
 
     @BeforeEach
@@ -60,7 +59,7 @@ public class OrderConcurrencyTest {
                 .isActive(true)
                 .build();
         user = userRepository.saveAndFlush(user);
-        userId = user.getId();
+        user.getId();
 
         // Setup Category (Committed)
         Category category = Category.builder()

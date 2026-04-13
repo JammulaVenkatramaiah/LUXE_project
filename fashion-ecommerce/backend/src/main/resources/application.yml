@@ -8,9 +8,9 @@ spring:
     active: dev
   # Database Configuration
   datasource:
-    url: jdbc:mysql://localhost:3307/fashion_ecommerce?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: fashion_user
-    password: fashion_password
+    url: jdbc:mysql://localhost:3306/fashion_ecommerce?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   # JPA/Hibernate Configuration
   jpa:
@@ -19,7 +19,6 @@ spring:
     show-sql: true
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.MySQLDialect
         format_sql: true
         use_sql_comments: true
         jdbc:
@@ -32,6 +31,14 @@ spring:
     cache-names: products,featured,admin_dashboard
     caffeine:
       spec: expireAfterWrite=15m,maximumSize=500
+
+  # Elasticsearch disable (since Docker is removed)
+  data:
+    elasticsearch:
+      repositories:
+        enabled: false
+  elasticsearch:
+    enabled: false
 
 # Security - JWT Configuration
 jwt:

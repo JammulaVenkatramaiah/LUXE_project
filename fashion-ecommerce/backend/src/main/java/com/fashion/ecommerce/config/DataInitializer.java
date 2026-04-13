@@ -21,20 +21,25 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     public DataInitializer(CategoryRepository categoryRepository, 
                            ProductRepository productRepository, 
                            UserRepository userRepository, 
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           org.springframework.jdbc.core.JdbcTemplate jdbcTemplate) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public void run(String... args) {
         try {
+            initializeVersionColumns();
+            
             System.out.println("DEBUG: DataInitializer running. Category count: " + categoryRepository.count());
             
             if (categoryRepository.count() == 0) {
@@ -145,53 +150,53 @@ public class DataInitializer implements CommandLineRunner {
                 System.out.println("DEBUG: Products seeded.");
             }
 
-            // Ensure test users have correct passwords even if they exist
-            userRepository.findByEmail("admin@fashion.com").ifPresentOrElse(
-                u -> {
-                    u.setPassword(passwordEncoder.encode("password123"));
-                    userRepository.save(u);
-                    System.out.println("DEBUG: Updated admin password.");
-                },
-                () -> {
-                    LocalDateTime now = LocalDateTime.now();
-                    User admin = User.builder()
-                            .name("Admin User")
-                            .email("admin@fashion.com")
-                            .password(passwordEncoder.encode("password123"))
-                            .role(UserRole.ADMIN)
-                            .isActive(true)
-                            .createdAt(now)
-                            .updatedAt(now)
-                            .build();
-                    userRepository.save(admin);
-                    System.out.println("DEBUG: Created admin user.");
-                }
-            );
+            // Ensure test users exist, but don't reset their passwords if they already do
+            if (userRepository.findByEmail("admin@fashion.com").isEmpty()) {
+                LocalDateTime now = LocalDateTime.now();
+                User admin = User.builder()
+                        .name("Admin User")
+                        .email("admin@fashion.com")
+                        .password(passwordEncoder.encode("password123"))
+                        .role(UserRole.ADMIN)
+                        .isActive(true)
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build();
+                userRepository.save(admin);
+                System.out.println("DEBUG: Created admin user.");
+            }
 
-            userRepository.findByEmail("john@example.com").ifPresentOrElse(
-                u -> {
-                    u.setPassword(passwordEncoder.encode("password123"));
-                    userRepository.save(u);
-                    System.out.println("DEBUG: Updated John Doe password.");
-                },
-                () -> {
-                    LocalDateTime now = LocalDateTime.now();
-                    User john = User.builder()
-                            .name("John Doe")
-                            .email("john@example.com")
-                            .password(passwordEncoder.encode("password123"))
-                            .role(UserRole.USER)
-                            .isActive(true)
-                            .createdAt(now)
-                            .updatedAt(now)
-                            .build();
-                    userRepository.save(john);
-                    System.out.println("DEBUG: Created John Doe user.");
-                }
-            );
+            if (userRepository.findByEmail("john@example.com").isEmpty()) {
+                LocalDateTime now = LocalDateTime.now();
+                User john = User.builder()
+                        .name("John Doe")
+                        .email("john@example.com")
+                        .password(passwordEncoder.encode("password123"))
+                        .role(UserRole.USER)
+                        .isActive(true)
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build();
+                userRepository.save(john);
+                System.out.println("DEBUG: Created John Doe user.");
+            }
         } catch (Exception e) {
             System.err.println("DEBUG: Error seeding data: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    private void initializeVersionColumns() {
+        System.out.println("DEBUG: Initializing missing version columns...");
+        try {
+            jdbcTemplate.execute("UPDATE users SET version = 0 WHERE version IS NULL");
+            jdbcTemplate.execute("UPDATE products SET version = 0 WHERE version IS NULL");
+            jdbcTemplate.execute("UPDATE cart SET version = 0 WHERE version IS NULL");
+            jdbcTemplate.execute("UPDATE cart_items SET version = 0 WHERE version IS NULL");
+            System.out.println("DEBUG: Version columns initialized successfully.");
+        } catch (Exception e) {
+            System.err.println("DEBUG: Error initializing version columns: " + e.getMessage());
+            // We don't throw here to avoid stopping the whole initialization if one table fails
         }
     }
 }

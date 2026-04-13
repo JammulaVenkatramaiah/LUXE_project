@@ -40,6 +40,21 @@ public class ApiResponse {
     @Getter
     @Setter
     @NoArgsConstructor
+    public static class MessageResponse {
+        private boolean success;
+        private String message;
+        private long timestamp;
+
+        public MessageResponse(boolean success, String message) {
+            this.success = success;
+            this.message = message;
+            this.timestamp = System.currentTimeMillis();
+        }
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
     @AllArgsConstructor
     public static class ErrorResponse {
         private boolean success;

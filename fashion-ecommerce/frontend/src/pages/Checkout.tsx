@@ -66,7 +66,11 @@ export default function Checkout() {
       navigate(`/order-success/${orderData.orderNumber}`)
     } catch (err: any) {
       console.error('Checkout failed:', err)
-      toast.error(err.response?.data?.message || 'Failed to place order. Please try again.')
+      if (err.code === 'ECONNABORTED') {
+        toast.error('The request timed out, but your order might have been processed. Please check your email or "My Orders" before trying again.', { duration: 6000 })
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to place order. Please try again.')
+      }
     } finally {
       setIsLoading(false)
     }

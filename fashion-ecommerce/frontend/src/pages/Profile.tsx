@@ -4,21 +4,25 @@ import { useAuth } from '../context/AuthContext'
 import { userAPI } from '../api'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User as UserIcon, Lock, Save, Key, ShoppingBag, Clock, CreditCard, Loader2 } from 'lucide-react'
-import { orderAPI } from '../api'
+import { X, User as UserIcon, Lock, Save, Key, ShoppingBag, Clock, CreditCard, Loader2, Heart, Trash2, ShoppingCart } from 'lucide-react'
+import { orderAPI, wishlistAPI, cartAPI } from '../api'
 
 export default function Profile() {
-  const { user, isLoggedIn, logout, updateUser } = useAuth()
+  const { user, isLoggedIn, updateUser, logout } = useAuth()
   const navigate = useNavigate()
-  
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  
+
   // Order History State
   const [orders, setOrders] = useState<any[]>([])
   const [isOrdersLoading, setIsOrdersLoading] = useState(true)
-  
+
+  // Wishlist State
+  const [wishlistItems, setWishlistItems] = useState<any[]>([])
+  const [isWishlistLoading, setIsWishlistLoading] = useState(true)
+
   // Edit Profile Form
   const [editForm, setEditForm] = useState({
     name: user?.name || '',
@@ -52,17 +56,11 @@ export default function Profile() {
     }
   }, [user])
 
-  const handleLogout = () => {
-    logout()
-    navigate('/')
-  }
-
   useEffect(() => {
     const fetchOrders = async () => {
       if (!isLoggedIn) return
       try {
         const response = await orderAPI.getMyOrders()
-        // Page object: { content: [...] }
         setOrders(response.data?.content || [])
       } catch (err) {
         console.error('Failed to fetch orders:', err)
@@ -70,8 +68,47 @@ export default function Profile() {
         setIsOrdersLoading(false)
       }
     }
+
+    const fetchWishlist = async () => {
+      if (!isLoggedIn) return
+      try {
+        const response = await wishlistAPI.getWishlist()
+        setWishlistItems(response.data?.content || [])
+      } catch (err) {
+        console.error('Failed to fetch wishlist:', err)
+      } finally {
+        setIsWishlistLoading(false)
+      }
+    }
+
     fetchOrders()
+    fetchWishlist()
   }, [isLoggedIn])
+
+  const handleRemoveFromWishlist = async (productId: number) => {
+    try {
+      await wishlistAPI.removeFromWishlist(productId)
+      setWishlistItems(wishlistItems.filter(item => item.product.id !== productId))
+      toast.success('Removed from wishlist')
+    } catch (err) {
+      toast.error('Failed to remove item')
+    }
+  }
+
+  const handleMoveToCart = async (productId: number) => {
+    try {
+      // Assuming context or API handles addToCart
+      // For simplicity, using cartAPI directly here if context is not available for this action
+      await cartAPI.addToCart(productId, 1)
+      await wishlistAPI.removeFromWishlist(productId)
+      setWishlistItems(wishlistItems.filter(item => item.product.id !== productId))
+      toast.success('Moved to cart')
+      // Refresh cart count if needed
+      window.location.reload() // Simple way to refresh state across components
+    } catch (err) {
+      toast.error('Failed to move to cart')
+    }
+  }
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -105,7 +142,7 @@ export default function Profile() {
       toast.error('Passwords do not match')
       return false
     }
-    
+
     try {
       setIsLoading(true)
       await userAPI.changePassword({
@@ -122,6 +159,12 @@ export default function Profile() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleLogout = () => {
+    logout()
+    toast.success('Logged out successfully')
+    navigate('/')
   }
 
   if (!isLoggedIn) {
@@ -167,7 +210,7 @@ export default function Profile() {
                   <h2 className="text-2xl font-semibold text-slate-900 dark:text-white">Account details</h2>
                   <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Your personal information is kept secure and only visible to you.</p>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="inline-flex items-center justify-center rounded-full bg-slate-900 px-6 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                 >
@@ -210,14 +253,14 @@ export default function Profile() {
             <div className="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-sm shadow-slate-200/50 dark:shadow-none transition-colors">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-white">Account Security</h2>
               <div className="mt-6 space-y-3">
-                <button 
+                <button
                   onClick={() => setIsEditModalOpen(true)}
                   className="w-full rounded-full border-2 border-slate-900 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white dark:border-slate-100 dark:text-slate-100 dark:hover:bg-slate-100 dark:hover:text-slate-900 flex items-center justify-center gap-2"
                 >
                   <UserIcon size={18} />
                   Edit account
                 </button>
-                <button 
+                <button
                   onClick={() => setIsPasswordModalOpen(true)}
                   className="w-full rounded-full border-2 border-slate-900 px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-900 hover:text-white dark:border-slate-100 dark:text-slate-100 dark:hover:bg-slate-100 dark:hover:text-slate-900 flex items-center justify-center gap-2"
                 >
@@ -261,7 +304,7 @@ export default function Profile() {
             ) : orders.length > 0 ? (
               <div className="space-y-6">
                 {orders.map((order) => (
-                  <motion.div 
+                  <motion.div
                     key={order.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -288,13 +331,12 @@ export default function Profile() {
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest ${
-                          order.status === 'DELIVERED' 
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                        <span className={`rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-widest ${order.status === 'DELIVERED'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                             : order.status === 'CANCELLED'
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                        }`}>
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                          }`}>
                           {order.status}
                         </span>
                         {order.status === 'CANCELLED' && (
@@ -313,6 +355,78 @@ export default function Profile() {
                 <p className="text-slate-500 dark:text-slate-400 font-medium">You haven't placed any orders yet.</p>
                 <Link to="/products" className="mt-6 inline-block btn-primary px-8">
                   Start Discovering
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Wishlist Section */}
+        <div className="mt-12 mb-12">
+          <div className="rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-sm shadow-slate-200/50 dark:shadow-none transition-colors">
+            <h2 className="text-2xl font-serif font-bold mb-8 flex items-center gap-3 text-slate-900 dark:text-white">
+              <Heart className="text-red-500 fill-red-500" />
+              My Wishlist
+            </h2>
+
+            {isWishlistLoading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="animate-spin text-accent" size={32} />
+              </div>
+            ) : wishlistItems.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <AnimatePresence>
+                  {wishlistItems.map((wish: any) => (
+                    <motion.div
+                      key={wish.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9 }}
+                      className="group relative bg-slate-50 dark:bg-slate-950 rounded-2xl overflow-hidden border border-slate-100 dark:border-slate-800 transition-all hover:shadow-xl"
+                    >
+                      <div className="aspect-[4/5] relative overflow-hidden">
+                        <img
+                          src={wish.product.imageUrl || '/placeholder.png'}
+                          alt={wish.product.name}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        />
+                        <button
+                          onClick={() => handleRemoveFromWishlist(wish.product.id)}
+                          className="absolute top-3 right-3 p-2 bg-white/80 dark:bg-black/50 backdrop-blur-sm rounded-full text-red-500 hover:bg-red-500 hover:text-white transition-all shadow-sm"
+                          title="Remove from wishlist"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+
+                      <div className="p-4">
+                        <h3 className="font-bold text-slate-900 dark:text-white truncate">{wish.product.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{wish.product.brand}</p>
+
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-lg font-bold text-slate-900 dark:text-white">
+                            ${(wish.product.discountPrice || wish.product.price).toFixed(2)}
+                          </span>
+                          <button
+                            onClick={() => handleMoveToCart(wish.product.id)}
+                            className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all hover:bg-slate-800 dark:hover:bg-slate-200"
+                          >
+                            <ShoppingCart size={14} />
+                            Move to Cart
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="text-center py-16 rounded-3xl border-2 border-dashed border-slate-100 dark:border-slate-800">
+                <Heart size={48} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
+                <p className="text-slate-500 dark:text-slate-400 font-medium">Your wishlist is empty.</p>
+                <Link to="/products" className="mt-6 inline-block btn-primary px-8 text-sm">
+                  Find something you love
                 </Link>
               </div>
             )}
@@ -343,12 +457,12 @@ export default function Profile() {
               >
                 <X size={24} />
               </button>
-              
+
               <h2 className="text-2xl font-serif font-bold mb-6 flex items-center gap-3">
                 <UserIcon className="text-slate-900 dark:text-white" />
                 Edit Profile
               </h2>
-              
+
               <form onSubmit={handleUpdateProfile} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
@@ -430,7 +544,7 @@ export default function Profile() {
                     />
                   </div>
                 </div>
-                
+
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -472,12 +586,12 @@ export default function Profile() {
               >
                 <X size={24} />
               </button>
-              
+
               <h2 className="text-2xl font-serif font-bold mb-6 flex items-center gap-3">
                 <Key className="text-slate-900 dark:text-white" />
                 Change Password
               </h2>
-              
+
               <form onSubmit={handleChangePassword} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -518,7 +632,7 @@ export default function Profile() {
                     placeholder="••••••••"
                   />
                 </div>
-                
+
                 <button
                   type="submit"
                   disabled={isLoading}
@@ -542,19 +656,19 @@ export default function Profile() {
 
 function Shield({ size, className }: { size: number, className: string }) {
   return (
-    <svg 
-      xmlns="http://www.w3.org/2000/svg" 
-      width={size} 
-      height={size} 
-      viewBox="0 0 24 24" 
-      fill="none" 
-      stroke="currentColor" 
-      strokeWidth="2" 
-      strokeLinecap="round" 
-      strokeLinejoin="round" 
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
     >
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   )
 }

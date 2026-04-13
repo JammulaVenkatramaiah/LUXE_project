@@ -196,3 +196,27 @@ export const userAPI = {
     return response.data
   },
 }
+
+export const wishlistAPI = {
+  getWishlist: async (page: number = 0, size: number = 10) => {
+    const response = await axiosInstance.get('/wishlist', {
+      params: { page, size },
+    })
+    return response.data
+  },
+
+  addToWishlist: async (productId: number) => {
+    const response = await axiosInstance.post(`/wishlist/${productId}`)
+    return response.data
+  },
+
+  removeFromWishlist: async (productId: number) => {
+    const response = await axiosInstance.delete(`/wishlist/${productId}`)
+    return response.data
+  },
+
+  checkWishlist: async (productId: number) => {
+    const response = await axiosInstance.get(`/wishlist/check/${productId}`)
+    return response.data
+  },
+}

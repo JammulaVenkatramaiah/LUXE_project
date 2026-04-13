@@ -17,7 +17,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class SearchService {
 
-    @Autowired
+    @Autowired(required = false)
     private ProductElasticRepository productElasticRepository;
 
     @Autowired
@@ -27,17 +27,24 @@ public class SearchService {
     public Page<ProductDTO> searchProducts(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         try {
-            log.debug("Attempting Elasticsearch search for: {}", keyword);
-            return productElasticRepository.findByNameOrDescription(keyword, keyword, pageable)
-                    .map(this::convertToDTO);
+            if (productElasticRepository != null) {
+                log.debug("Attempting Elasticsearch search for: {}", keyword);
+                return productElasticRepository.findByNameOrDescription(keyword, keyword, pageable)
+                        .map(this::convertToDTO);
+            }
         } catch (Exception e) {
-            log.error("Elasticsearch search failed, falling back to database: {}", e.getMessage());
-            return productRepository.searchProducts(keyword, pageable)
-                    .map(this::convertToProductDTO);
+            log.error("Elasticsearch search failed: {}", e.getMessage());
         }
+        
+        log.debug("Using database fallback for: {}", keyword);
+        return productRepository.searchProducts(keyword, pageable)
+                .map(this::convertToProductDTO);
     }
 
     public void syncProductToElastic(Product product) {
+        if (productElasticRepository == null) {
+            return;
+        }
         try {
             ProductDocument document = ProductDocument.builder()
                     .id(product.getId().toString())
@@ -59,6 +66,9 @@ public class SearchService {
     }
 
     public void deleteProductFromElastic(Long productId) {
+        if (productElasticRepository == null) {
+            return;
+        }
         try {
             productElasticRepository.deleteById(productId.toString());
         } catch (Exception e) {

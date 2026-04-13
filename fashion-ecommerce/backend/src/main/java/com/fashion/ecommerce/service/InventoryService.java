@@ -23,9 +23,6 @@ public class InventoryService {
     @Autowired
     private SupplierRepository supplierRepository;
 
-    @Autowired
-    private NotificationService notificationService;
-
     @Transactional
     public InventoryMovement restockProduct(Long productId, Long supplierId, Integer quantityAdded) {
         Product product = productRepository.findById(productId)
@@ -45,17 +42,18 @@ public class InventoryService {
                 .build();
 
         InventoryMovement savedMovement = inventoryMovementRepository.save(movement);
-        
+
         // Check for low stock alerts
         checkAndNotifyLowStock(savedProduct);
-        
+
         return savedMovement;
     }
 
     private void checkAndNotifyLowStock(Product product) {
         int threshold = 10;
         if (product.getStockQuantity() < threshold) {
-            System.out.println("LOW STOCK ALERT: Product " + product.getName() + " is below threshold (" + product.getStockQuantity() + ")");
+            System.out.println("LOW STOCK ALERT: Product " + product.getName() + " is below threshold ("
+                    + product.getStockQuantity() + ")");
             // In a real app, this would send an email to the admin
         }
     }

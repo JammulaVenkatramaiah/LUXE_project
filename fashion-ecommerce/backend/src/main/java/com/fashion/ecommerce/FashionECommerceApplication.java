@@ -16,4 +16,15 @@ public class FashionECommerceApplication {
         SpringApplication.run(FashionECommerceApplication.class, args);
     }
 
+    @org.springframework.context.annotation.Bean
+    public org.springframework.core.task.TaskExecutor taskExecutor() {
+        org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor executor = new org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(10);
+        executor.setQueueCapacity(25);
+        executor.setThreadNamePrefix("Async-");
+        executor.initialize();
+        return executor;
+    }
+
 }
