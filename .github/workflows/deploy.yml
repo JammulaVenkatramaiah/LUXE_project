@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ main ]
 
-permissions:
-  contents: write
-
 jobs:
   # 1. Backend CI/CD
   backend-deploy:
@@ -36,6 +33,10 @@ jobs:
   frontend-deploy:
     runs-on: ubuntu-latest
     needs: backend-deploy
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
     steps:
       - uses: actions/checkout@v4
       
