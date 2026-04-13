@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500" role="img" aria-label="Placeholder image">
+  <rect width="400" height="500" fill="#f8fafc" />
+  <rect x="20" y="20" width="360" height="460" fill="#e2e8f0" rx="24" />
+  <text x="200" y="260" text-anchor="middle" fill="#64748b" font-family="Verdana,Arial,Helvetica,sans-serif" font-size="24">Image not available</text>
+</svg>
