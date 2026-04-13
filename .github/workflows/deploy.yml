@@ -26,8 +26,10 @@ jobs:
           mvn clean package -DskipTests
           
       - name: Trigger Render Deployment
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.RENDER_DEPLOY_HOOK != ''
-        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && env.RENDER_DEPLOY_HOOK != ''
+        run: curl -X POST $RENDER_DEPLOY_HOOK
 
   # 2. Frontend CI/CD (GitHub Pages)
   frontend-deploy:
@@ -53,6 +55,8 @@ jobs:
           npm install
           
       - name: Build Frontend
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
         run: |
           cd fashion-ecommerce/frontend
           npm run build

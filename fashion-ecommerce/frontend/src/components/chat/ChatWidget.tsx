@@ -35,7 +35,9 @@ const ChatWidget = () => {
   }, [messages])
 
   const connect = () => {
-    const socket = new SockJS('http://localhost:8080/ws')
+    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+    const wsBase = apiBase.replace(/\/api$/, '')
+    const socket = new SockJS(`${wsBase}/ws`)
     stompClient.current = over(socket)
     stompClient.current.connect({}, onConnected, onError)
   }
