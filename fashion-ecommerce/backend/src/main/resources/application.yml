@@ -52,7 +52,7 @@ app:
   name: Fashion E-Commerce
   version: 1.0.0
   cors:
-    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://frontend-bsqfvuyix-jammulavenkatramaiahs-projects.vercel.app,https://frontend-67o8e25m9-jammulavenkatramaiahs-projects.vercel.app}
+    allowed-origins: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://frontend-bsqfvuyix-jammulavenkatramaiahs-projects.vercel.app,https://frontend-67o8e25m9-jammulavenkatramaiahs-projects.vercel.app,https://luxestyle-96.vercel.app}
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
     allowed-headers: "*"
     allow-credentials: true
