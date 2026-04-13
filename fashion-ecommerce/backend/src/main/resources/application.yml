@@ -54,7 +54,7 @@ app:
   name: Fashion E-Commerce
   version: 1.0.0
   cors:
-    allowed-origin-patterns: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://*.vercel.app,https://*-jammulavenkatramaiahs-projects.vercel.app}
+    allowed-origin-patterns: ${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,https://*.vercel.app,https://*-jammulavenkatramaiahs-projects.vercel.app,https://jammulavenkatramaiah.github.io}
     allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
     allowed-headers: "*"
     allow-credentials: true
