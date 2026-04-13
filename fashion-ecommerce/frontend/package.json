@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://jammulavenkatramaiah.github.io/fashion-ecommerce",
+  "homepage": "https://jammulavenkatramaiah.github.io/LUXE_project",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
