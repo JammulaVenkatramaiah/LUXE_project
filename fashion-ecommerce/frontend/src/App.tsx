@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
@@ -47,7 +47,7 @@ function App() {
   }
 
   return (
-    <Router basename="/LUXE_project" future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className={`${isDark ? 'dark' : ''} min-h-screen`}>
         <Navbar isDark={isDark} toggleTheme={toggleTheme} />
         
