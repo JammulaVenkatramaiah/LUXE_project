@@ -26,7 +26,7 @@ jobs:
           mvn clean package -DskipTests
           
       - name: Trigger Render Deployment
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.RENDER_DEPLOY_HOOK != ''
         run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
 
   # 2. Frontend CI/CD (GitHub Pages)
