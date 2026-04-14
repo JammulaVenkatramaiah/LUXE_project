@@ -1,10 +1,10 @@
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { userAPI } from '../api'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, User as UserIcon, Lock, Save, Key, ShoppingBag, Clock, CreditCard, Loader2, Heart, Trash2, ShoppingCart } from 'lucide-react'
+import { X, User as UserIcon, Lock, Save, Key, ShoppingBag, Clock, CreditCard, Loader2, Heart, Trash2, ShoppingCart, Package, MapPin } from 'lucide-react'
 import { orderAPI, wishlistAPI, cartAPI } from '../api'
 
 export default function Profile() {
@@ -22,6 +22,14 @@ export default function Profile() {
   // Wishlist State
   const [wishlistItems, setWishlistItems] = useState<any[]>([])
   const [isWishlistLoading, setIsWishlistLoading] = useState(true)
+
+  // Tracking Modal State
+  const [trackingOrderId, setTrackingOrderId] = useState<number | null>(null)
+  const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false)
+  const [trackingEvents, setTrackingEvents] = useState<any[]>([])
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false)
+  
+  const location = useLocation()
 
   // Edit Profile Form
   const [editForm, setEditForm] = useState({
@@ -84,6 +92,32 @@ export default function Profile() {
     fetchOrders()
     fetchWishlist()
   }, [isLoggedIn])
+
+  // Handle ?track= query parameter
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const trackId = params.get('track')
+    if (trackId && isLoggedIn) {
+      handleTrackOrder(parseInt(trackId))
+      // Clean up the URL
+      navigate('/profile', { replace: true })
+    }
+  }, [location.search, isLoggedIn])
+
+  const handleTrackOrder = async (orderId: number) => {
+    setTrackingOrderId(orderId)
+    setIsTrackingModalOpen(true)
+    setIsTrackingLoading(true)
+    try {
+      const response = await orderAPI.getOrderTracking(orderId)
+      setTrackingEvents(response.data || [])
+    } catch (err) {
+      console.error('Failed to fetch tracking:', err)
+      toast.error('Failed to load tracking information')
+    } finally {
+      setIsTrackingLoading(false)
+    }
+  }
 
   const handleRemoveFromWishlist = async (productId: number) => {
     try {
@@ -339,6 +373,14 @@ export default function Profile() {
                           }`}>
                           {order.status}
                         </span>
+                        {order.status !== 'CANCELLED' && (
+                          <button
+                            onClick={() => handleTrackOrder(order.id)}
+                            className="text-[10px] font-black uppercase tracking-wider text-slate-900 dark:text-white underline underline-offset-4 hover:text-accent transition-colors"
+                          >
+                            Track Order
+                          </button>
+                        )}
                         {order.status === 'CANCELLED' && (
                           <p className="text-[10px] text-red-500 font-medium italic">
                             Reason: {order.rejectReason || 'Order rejected by admin'}
@@ -646,6 +688,78 @@ export default function Profile() {
                   )}
                 </button>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Order Tracking Modal */}
+      <AnimatePresence>
+        {isTrackingModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsTrackingModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 p-8 shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <button
+                onClick={() => setIsTrackingModalOpen(false)}
+                className="absolute top-6 right-6 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
+              >
+                <X size={24} />
+              </button>
+
+              <h2 className="text-2xl font-serif font-bold mb-8 flex items-center gap-3">
+                <Package className="text-slate-900 dark:text-white" />
+                Track Order #{trackingOrderId}
+              </h2>
+
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                {isTrackingLoading ? (
+                  <div className="flex flex-col items-center justify-center py-12 gap-4">
+                    <Loader2 className="animate-spin text-slate-900 dark:text-white" size={40} />
+                    <p className="text-sm font-medium text-gray-500">Fetching latest status...</p>
+                  </div>
+                ) : trackingEvents.length > 0 ? (
+                  <div className="relative space-y-8 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-100 dark:before:bg-slate-800">
+                    {trackingEvents.map((event, index) => (
+                      <div key={event.id} className="relative pl-10">
+                        <div className={`absolute left-0 top-1.5 h-[24px] w-[24px] rounded-full border-4 border-white dark:border-slate-900 z-10 ${
+                          index === 0 ? 'bg-slate-900 dark:bg-white scale-125' : 'bg-slate-200 dark:bg-slate-700'
+                        }`} />
+                        <div>
+                          <p className={`font-bold ${index === 0 ? 'text-slate-900 dark:text-white text-lg' : 'text-gray-600 dark:text-gray-400'}`}>
+                            {event.status}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-500 mt-1">{event.description}</p>
+                          <div className="mt-2 flex items-center gap-4 text-xs font-semibold">
+                            <span className="flex items-center gap-1 text-slate-400">
+                              <MapPin size={12} />
+                              {event.location}
+                            </span>
+                            <span className="text-slate-300">•</span>
+                            <span className="text-slate-400">
+                              {new Date(event.createdAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No tracking events found for this order.</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </div>
         )}

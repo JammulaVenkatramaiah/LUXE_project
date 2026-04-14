@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ProductCard from '../components/ProductCard'
-import { Filter, Plus, Edit2, Trash2 } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Filter, Plus, Edit2, Trash2, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { productAPI, categoryAPI } from '../api'
 import { useAuth } from '../context/AuthContext'
 import ProductFormModal from '../components/ProductFormModal'
@@ -157,82 +157,82 @@ export default function Products() {
         </div>
 
         <div className="flex gap-8">
-          {/* Sidebar Filter */}
-          <motion.div
-            className={`md:w-64 ${isFilterOpen || 'hidden'} md:block`}
-            initial={{ x: -20 }}
-            animate={{ x: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-lg sticky top-24">
+          {/* Mobile Filter Drawer */}
+          <AnimatePresence>
+            {isFilterOpen && (
+              <div className="fixed inset-0 z-[100] md:hidden">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsFilterOpen(false)}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                />
+
+                {/* Drawer Content */}
+                <motion.div
+                  initial={{ x: '-100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '-100%' }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                  className="absolute top-0 left-0 bottom-0 w-80 bg-white dark:bg-gray-900 shadow-2xl p-6 overflow-y-auto"
+                >
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-2xl font-serif font-bold flex items-center gap-2">
+                      <Filter size={24} />
+                      Filters
+                    </h3>
+                    <button
+                      onClick={() => setIsFilterOpen(false)}
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  {/* Reuse Filter Content */}
+                  <FilterContent 
+                    selectedCategory={selectedCategory}
+                    setSelectedCategory={setSelectedCategory}
+                    priceRange={priceRange}
+                    setPriceRange={setPriceRange}
+                    sortBy={sortBy}
+                    setSortBy={setSortBy}
+                  />
+                </motion.div>
+              </div>
+            )}
+          </AnimatePresence>
+
+          {/* Desktop Sidebar Filter */}
+          <div className="hidden md:block w-64">
+            <div className="bg-gray-50 dark:bg-gray-900 p-6 rounded-3xl sticky top-24 border border-gray-100 dark:border-gray-800">
               <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
                 <Filter size={20} />
                 Filters
               </h3>
-
-              {/* Category Filter */}
-              <div className="mb-8">
-                <h4 className="font-semibold mb-4">Category</h4>
-                <div className="space-y-2">
-                  {['Men', 'Women', 'Kids', 'Accessories'].map((cat) => (
-                    <label key={cat} className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={selectedCategory === cat}
-                        onChange={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                        className="rounded"
-                      />
-                      <span>{cat}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Price Filter */}
-              <div className="mb-8">
-                <h4 className="font-semibold mb-4">Price Range</h4>
-                <div className="space-y-2">
-                  <input
-                    type="range"
-                    min="0"
-                    max="1000"
-                    value={priceRange[1]}
-                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-sm">
-                    <span>${priceRange[0]}</span>
-                    <span>${priceRange[1]}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sort */}
-              <div>
-                <h4 className="font-semibold mb-4">Sort By</h4>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="input-field"
-                >
-                  <option value="createdAt">Newest</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="rating">Top Rated</option>
-                </select>
-              </div>
+              
+              <FilterContent 
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                priceRange={priceRange}
+                setPriceRange={setPriceRange}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+              />
             </div>
-          </motion.div>
+          </div>
 
           {/* Products Grid */}
           <div className="flex-1">
             {/* Filter Toggle for Mobile */}
             <button
-              onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className="md:hidden mb-6 btn-secondary"
+              onClick={() => setIsFilterOpen(true)}
+              className="md:hidden mb-6 btn-secondary flex items-center justify-center gap-2"
             >
-              <Filter size={18} className="mr-2 inline" />
-              {isFilterOpen ? 'Hide' : 'Show'} Filters
+              <Filter size={18} />
+              Filters
             </button>
 
             {/* Loading State */}
@@ -299,5 +299,70 @@ export default function Products() {
         product={editingProduct}
       />
     </div>
+  )
+}
+
+function FilterContent({ 
+  selectedCategory, 
+  setSelectedCategory, 
+  priceRange, 
+  setPriceRange, 
+  sortBy, 
+  setSortBy 
+}: any) {
+  return (
+    <>
+      {/* Category Filter */}
+      <div className="mb-8">
+        <h4 className="font-semibold mb-4 text-gray-900 dark:text-white">Category</h4>
+        <div className="space-y-3">
+          {['Men', 'Women', 'Kids', 'Accessories'].map((cat) => (
+            <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={selectedCategory === cat}
+                onChange={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                className="w-5 h-5 rounded border-gray-300 dark:border-gray-700 text-slate-900 focus:ring-slate-900 dark:bg-gray-800"
+              />
+              <span className="text-gray-600 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">{cat}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Price Filter */}
+      <div className="mb-8">
+        <h4 className="font-semibold mb-4 text-gray-900 dark:text-white">Price Range</h4>
+        <div className="space-y-4">
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            value={priceRange[1]}
+            onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
+            className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-slate-900 dark:accent-white"
+          />
+          <div className="flex justify-between text-sm font-medium">
+            <span className="text-gray-600 dark:text-gray-400">${priceRange[0]}</span>
+            <span className="text-slate-900 dark:text-white">${priceRange[1]}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sort */}
+      <div>
+        <h4 className="font-semibold mb-4 text-gray-900 dark:text-white">Sort By</h4>
+        <select
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-transparent focus:ring-2 focus:ring-slate-900 outline-none transition-all dark:text-white"
+        >
+          <option value="createdAt" className="dark:bg-gray-900">Newest</option>
+          <option value="price-low" className="dark:bg-gray-900">Price: Low to High</option>
+          <option value="price-high" className="dark:bg-gray-900">Price: High to Low</option>
+          <option value="rating" className="dark:bg-gray-900">Top Rated</option>
+        </select>
+      </div>
+    </>
   )
 }

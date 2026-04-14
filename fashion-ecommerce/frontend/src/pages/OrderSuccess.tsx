@@ -119,7 +119,10 @@ export default function OrderSuccess() {
           >
             Continue Shopping
           </button>
-          <button className="btn-secondary w-full">
+          <button
+            onClick={() => navigate(`/profile?track=${id}`)}
+            className="btn-secondary w-full"
+          >
             Track My Order
           </button>
         </motion.div>

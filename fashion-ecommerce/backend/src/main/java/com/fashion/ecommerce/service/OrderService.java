@@ -205,7 +205,12 @@ public class OrderService {
                 .location("Warehouse")
                 .build());
         
-        notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), "CONFIRMED");
+        // Non-fatal notification failure
+        try {
+            notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), "CONFIRMED");
+        } catch (Exception e) {
+            logger.error("DEBUG: Failed to send status update notification (non-fatal): {}", e.getMessage());
+        }
         
         return convertToDTO(savedOrder);
     }
@@ -237,7 +242,12 @@ public class OrderService {
                 .location("System")
                 .build());
         
-        notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), "CANCELLED (Rejected: " + reason + ")");
+        // Non-fatal notification failure
+        try {
+            notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), "CANCELLED (Rejected: " + reason + ")");
+        } catch (Exception e) {
+            logger.error("DEBUG: Failed to send status update notification (non-fatal): {}", e.getMessage());
+        }
         
         return convertToDTO(savedOrder);
     }
@@ -258,7 +268,12 @@ public class OrderService {
                 .location(location)
                 .build());
                 
-        notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), newStatus.toString());
+        // Non-fatal notification failure
+        try {
+            notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), newStatus.toString());
+        } catch (Exception e) {
+            logger.error("DEBUG: Failed to send status update notification (non-fatal): {}", e.getMessage());
+        }
                 
         return convertToDTO(savedOrder);
     }
