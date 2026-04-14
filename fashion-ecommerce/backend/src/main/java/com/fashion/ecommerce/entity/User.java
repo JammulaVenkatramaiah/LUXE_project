@@ -52,7 +52,7 @@ public class User {
     private String country;
 
     @Enumerated(EnumType.STRING)
-    @Column(length = 20)
+    @Column(name = "role", columnDefinition = "VARCHAR(20) DEFAULT 'USER'")
     private UserRole role;
 
     @Column(name = "profile_image_url", length = 255)

@@ -187,32 +187,64 @@ public class OrderService {
 
     @Transactional
     public OrderDTO acceptOrder(Long orderId) {
+        logger.info("ADMIN: Attempting to accept order ID: {}", orderId);
+        
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+                .orElseThrow(() -> {
+                    logger.error("ADMIN ERROR: Order not found with ID: {}", orderId);
+                    return new ResourceNotFoundException("Order not found");
+                });
+        
+        logger.info("ADMIN: Order found. Number: {}, Status: {}, User ID: {}", 
+                 order.getOrderNumber(), order.getStatus(), 
+                 order.getUser() != null ? order.getUser().getId() : "NULL");
         
         if (order.getStatus() != OrderStatus.PENDING) {
+            logger.warn("ADMIN WARN: Cannot accept non-pending order. Current status: {}", order.getStatus());
             throw new BadRequestException("Only pending orders can be accepted. Current status: " + order.getStatus());
         }
         
         order.setStatus(OrderStatus.CONFIRMED);
         order.setUpdatedAt(LocalDateTime.now());
+        
+        logger.info("ADMIN: Updating order status to CONFIRMED in DB...");
         Order savedOrder = orderRepository.save(order);
+        logger.info("ADMIN: Order status updated successfully.");
         
-        orderTrackingRepository.save(OrderTrackingEvent.builder()
-                .order(savedOrder)
-                .status(OrderStatus.CONFIRMED)
-                .description("Order has been accepted by admin and is being processed")
-                .location("Warehouse")
-                .build());
-        
-        // Non-fatal notification failure
         try {
-            notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), "CONFIRMED");
+            logger.info("ADMIN: Saving tracking event...");
+            orderTrackingRepository.save(OrderTrackingEvent.builder()
+                    .order(savedOrder)
+                    .status(OrderStatus.CONFIRMED)
+                    .description("Order has been accepted by admin and is being processed")
+                    .location("Warehouse")
+                    .build());
+            logger.info("ADMIN: Tracking event saved.");
         } catch (Exception e) {
-            logger.error("DEBUG: Failed to send status update notification (non-fatal): {}", e.getMessage());
+            logger.error("ADMIN ERROR: Failed to save tracking event (non-fatal): {}", e.getMessage());
         }
         
-        return convertToDTO(savedOrder);
+        // Non-fatal notification failure
+        if (order.getUser() != null) {
+            try {
+                logger.info("ADMIN: Triggering notification to user: {}", order.getUser().getEmail());
+                notificationService.sendOrderStatusUpdate(order.getUser(), order.getOrderNumber(), "CONFIRMED");
+            } catch (Exception e) {
+                logger.error("ADMIN ERROR: Failed to trigger notification service: {}", e.getMessage());
+            }
+        } else {
+            logger.warn("ADMIN WARN: No user associated with order. Skipping notification.");
+        }
+        
+        logger.info("ADMIN: Converting order to DTO for response...");
+        try {
+            OrderDTO response = convertToDTO(savedOrder);
+            logger.info("ADMIN: Order accepted successfully. Response prepared.");
+            return response;
+        } catch (Exception e) {
+            logger.error("CRITICAL ERROR: convertToDTO failed for order {}: {}", orderId, e.getMessage(), e);
+            throw e;
+        }
     }
 
     @Transactional
@@ -323,17 +355,23 @@ public class OrderService {
     }
 
     private OrderDTO convertToDTO(Order order) {
-        List<OrderItemDTO> items = order.getOrderItems().stream().map(item -> 
-            OrderItemDTO.builder()
-                .id(item.getId())
-                .productId(item.getProduct().getId())
-                .productName(item.getProduct().getName())
-                .quantity(item.getQuantity())
-                .unitPrice(item.getUnitPrice())
-                .size(item.getSize())
-                .color(item.getColor())
-                .build()
-        ).collect(Collectors.toList());
+        if (order == null) return null;
+        
+        List<OrderItemDTO> items = order.getOrderItems() != null 
+                ? order.getOrderItems().stream()
+                    .filter(item -> item != null && item.getProduct() != null)
+                    .map(item -> 
+                        OrderItemDTO.builder()
+                            .id(item.getId())
+                            .productId(item.getProduct().getId())
+                            .productName(item.getProduct().getName())
+                            .quantity(item.getQuantity())
+                            .unitPrice(item.getUnitPrice())
+                            .size(item.getSize())
+                            .color(item.getColor())
+                            .build()
+                    ).collect(Collectors.toList())
+                : new ArrayList<>();
 
         return OrderDTO.builder()
                 .id(order.getId())
@@ -342,12 +380,12 @@ public class OrderService {
                 .taxAmount(order.getTaxAmount())
                 .shippingCost(order.getShippingCost())
                 .totalPrice(order.getTotalPrice())
-                .status(order.getStatus().toString())
+                .status(order.getStatus() != null ? order.getStatus().toString() : "UNKNOWN")
                 .paymentMethod(order.getPaymentMethod())
                 .shippingAddress(order.getShippingAddress())
-                .userId(order.getUser().getId())
-                .userName(order.getUser().getName())
-                .userEmail(order.getUser().getEmail())
+                .userId(order.getUser() != null ? order.getUser().getId() : null)
+                .userName(order.getUser() != null ? order.getUser().getName() : "Guest")
+                .userEmail(order.getUser() != null ? order.getUser().getEmail() : "N/A")
                 .orderItems(items)
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
