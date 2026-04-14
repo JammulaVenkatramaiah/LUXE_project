@@ -93,10 +93,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse.ErrorResponse> handleGlobalException(
             Exception ex, WebRequest request) {
+        ex.printStackTrace(); // Log stack trace to console for Render logs
         ApiResponse.ErrorResponse error = new ApiResponse.ErrorResponse();
         error.setSuccess(false);
         error.setMessage("An unexpected error occurred");
-        error.setError(ex.getMessage());
+        error.setError(ex.getClass().getSimpleName() + ": " + ex.getMessage());
         error.setTimestamp(System.currentTimeMillis());
         return new ResponseEntity<>(error, HttpStatus.INTERNAL_SERVER_ERROR);
     }
